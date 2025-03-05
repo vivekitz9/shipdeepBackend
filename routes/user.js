@@ -94,6 +94,7 @@ router.post('/login', async (req, res) => {
 						data.token = token
 						data.sessionId = resp.Details
 						const itemObject = {
+							fcmToken: body.fcmToken,
 							sessionId: data.sessionId,
 							updatedDate:new Date().toISOString()
 						}

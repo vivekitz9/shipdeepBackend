@@ -21,6 +21,7 @@ const bannerRoute = require("./routes/banner");
 const dashboardRoute = require("./routes/dashboard");
 const chatRoute = require("./routes/chat");
 const staticRoute = require("./routes/staticRouter");
+const notificationRoute = require("./routes/notification");
 
 const app = express();
 const PORT = process.env.PORT || 8002;
@@ -53,10 +54,12 @@ app.use("/api/v1/mission", missionRoute);
 app.use("/api/v1/banner", bannerRoute);
 app.use("/api/v1/dashboard", dashboardRoute);
 app.use("/api/v1/chat", chatRoute);
+app.use("/api/v1/notification", notificationRoute);
 
-//app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
+
+app.listen(PORT, () => console.log(`Server Started at PORT:${PORT}`));
 // Create HTTPS Server
-const server = https.createServer(options, app)
-server.listen(PORT, () => {
-    console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
-  });
+// const server = https.createServer(options, app)
+// server.listen(PORT, () => {
+//     console.log(`🚀 HTTPS Server running at https://localhost:${PORT}`);
+//   });
