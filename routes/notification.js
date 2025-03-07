@@ -32,54 +32,45 @@ async function getAccessToken() {
 
 
 
-router.post("/createNotification", upload.single("file"), async (req, res) => {
-  const body = req.body;
+router.post("/createNotification", upload.single("file"),  async (req, res) => {
+   const body = req.body;
 
-  try {
-      // Validate required fields
-      if (!body.notificationTitle) {
-          return res.errors({ message: 'Notification Title Required' });
-      }
-      if (!body.notificationDescription) {
-          return res.errors({ message: 'Notification Description Required' });
-      }
+   try {
+    if(!body.notificationTitle){
+			res.errors({message:'Notification Title Required'})
+		}
+    if(!body.notificationDescription){
+			res.errors({message:'Notification Description Required'})
+		}
 
-      body.id = uuidv4();
-      let image = "N/A"; // Default value for optional image
+    body.id = uuidv4();
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+		const fileContent = req.file.buffer; // File content from Multer
+		const newKey = `${Date.now()}_${req.file.originalname}`; // Unique filename
+		const contentType = req.file.mimetype;
+    //Upload to S3
+    const result = await uploadFileToS3(fileContent, bucketName, newKey, contentType);
+    // console.log(result);
+    const image = result.Location;
 
-      // Check if a file was uploaded
-      if (req.file) {
-          const bucketName = process.env.AWS_S3_BUCKET_NAME;
-          const fileContent = req.file.buffer;
-          const newKey = `${Date.now()}_${req.file.originalname}`;
-          const contentType = req.file.mimetype;
+    const notificationPayload = {
+        id: body.id,
+        notificationTitle: body.notificationTitle,
+        notificationDescription: body.notificationDescription,
+        notificationImage: image,
+        createdBy: body.userName,
+    }
+    
+     await insertItem(NOTIFICATION_TABLE_NAME, notificationPayload);
 
-          // Upload file to S3
-          const result = await uploadFileToS3(fileContent, bucketName, newKey, contentType);
-          image = result.Location; 
-      }
-
-      const notificationPayload = {
-          id: body.id,
-          notificationTitle: body.notificationTitle,
-          notificationDescription: body.notificationDescription,
-          notificationImage: image, // Image is optional
-          createdBy: body.userName,
-      };
-
-      await insertItem(NOTIFICATION_TABLE_NAME, notificationPayload);
-
-      res.success({
-          message: "Notification Created Successfully",
-          data: notificationPayload
-      });
-
-  } catch (err) {
-      res.errors({ message: 'Something went wrong', data: err });
-  }
+    res.success({
+        message: "Notification Created Successfully",
+        data: notificationPayload
+    });
+   } catch (err) {
+    res.errors({message:'Something went wrong',data:err})
+   }
 });
-
-
 
 router.get("/fetchAllNotifications", async (req,res) => {
   try {
@@ -99,18 +90,17 @@ router.post("/sendNotification", upload.single("file"), async (req,res) => {
     const body = req.body;
     const accessToken = await getAccessToken();
 
-    let image = "N/A"; // Default value for optional image
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+		const fileContent = req.file.buffer; // File content from Multer
+		const newKey = `${Date.now()}_${req.file.originalname}`; // Unique filename
+		const contentType = req.file.mimetype;
+    //Upload to S3
+    const result = await uploadFileToS3(fileContent, bucketName, newKey, contentType);
+    // console.log(result);
+    const image = result.Location;
 
-    if (req.file) {
-      const bucketName = process.env.AWS_S3_BUCKET_NAME;
-      const fileContent = req.file.buffer;
-      const newKey = `${Date.now()}_${req.file.originalname}`;
-      const contentType = req.file.mimetype;
 
-      // Upload file to S3
-      const result = await uploadFileToS3(fileContent, bucketName, newKey, contentType);
-      image = result.Location; 
-  }
+    // console.log("access-token", accessToken);
 
     const item = await getAllItems('users');
     const userDetails = item.Items;
@@ -119,7 +109,7 @@ router.post("/sendNotification", upload.single("file"), async (req,res) => {
 
     const fcmId = userDetails.map((d) => d.fcmToken);
 
-    // console.log("fcmTokens", fcmId);
+    console.log("fcmTokens", fcmId);
 
     // const fcmId = ["dqKPbVLkTAitNdfDMuWFHF:APA91bEhnJHX7PNui6I5_rdF5jWBrf3zM7s-JwOXCYFemsb7JsFzeqGfMagXyC-X3lhDF4ZdMDC6QMLARXF5jDPL62BpyhWW5fIkMrzmwKbj8Nc4dsBQs2A"]
 

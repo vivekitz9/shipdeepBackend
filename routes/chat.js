@@ -40,8 +40,6 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 			res.errors({message:'senderId Required'})
 		}else if(!body.receiverId){
 			res.errors({message:'receiverId Required'})
-		}else if(!body.message){
-			res.errors({message:'message Required'})
 		}else{
 			
 			const imageFile = req.files.image ? req.files.image[0] : null;
@@ -86,7 +84,7 @@ router.post("/send",verifyToken, upload.fields([{ name: "image" }, { name: "vide
 				id:body.id,
 				senderId:body.senderId,
 				receiverId:body.receiverId,
-				text:body.message,
+				text:body.message || "",
 				image:image,
 				video:video,
 				document:document,
