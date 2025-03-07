@@ -195,11 +195,24 @@ const getUserMessage = async(senderId, receiverId)=> {
 }
 
 
+// const getConditionalRecords = async(params) => {
+// 	try {
+// 	  const result = await DocumentClient.scan(params).promise();
+// 	  console.log("Recent Records:", result.Items);
+// 	  return result.Items;
+// 	} catch (error) {
+// 	  console.error("Error fetching recent records:", error);
+// 	}
+//   }
+
+
 const getConditionalRecords = async(params) => {
 	try {
 	  const result = await DocumentClient.scan(params).promise();
-	  console.log("Recent Records:", result.Items);
-	  return result.Items;
+	//   console.log("Recent Records:", result.Items);
+	  const sortedItems = result.Items.length>0? 
+	  result.Items.sort((a, b) => new Date(a.updatedDate) - new Date(b.updatedDate)):[]
+	return sortedItems
 	} catch (error) {
 	  console.error("Error fetching recent records:", error);
 	}
