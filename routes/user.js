@@ -78,8 +78,9 @@ router.post('/login', async (req, res) => {
 						data.token = token
 						data.sessionId = 'd8039ce8-3088-41f1-8e08-10bd3b99ce1e'
 						const itemObject = {
+							fcmToken: body.fcmToken,
 							sessionId: data.sessionId,
-							updatedDate:new Date().toISOString()
+							updatedDate:new Date().toISOString(),
 						}
 						await updateItem(TABLE_NAME, data.id, itemObject)
 						res.success({data:data})
@@ -347,7 +348,7 @@ router.post('/users', upload.single("file"), async (req, res) => {
 				};	
 				const token = await generateAuthToken(userPayload);
 				item.token =token
-				console.log('newItem', newItem);
+				// console.log('newItem', newItem);
 				res.success({data:item, message:"user registered successfuly"})
 			}
 		}
@@ -541,7 +542,7 @@ router.post('/districts', async (req, res) => {
 				
 				body.id = districts.Items.length+1;
 
-				const isunique =districts.Items.find(district=>district.name.toLowerCase() === body.name.toLowerCase())
+				const isunique = districts.Items.find(district=>district.name.toLowerCase() === body.name.toLowerCase())
 				console.log('isunique',isunique,districts.Items);
 				if(isunique){
 					res.errors({message:'duplicate record',data:{}})
