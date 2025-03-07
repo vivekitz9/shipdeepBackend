@@ -126,13 +126,7 @@ router.put('/:id',verifyToken, upload.single("file"),  async (req, res) => {
 			const toggle= (body.toggle==1 || body.toggle==0)?body.toggle:data.toggle
 			
 			const itemObject = {
-				eventDate:body.eventDate || data.eventDate ,
-				eventStartTime:body.eventStartTime || data.eventStartTime,
-				eventEndTime:body.eventEndTime || data.eventEndTime,
-				eventTitle:body.eventTitle || data.eventTitle,
-				eventDescription:body.eventDescription || data.eventDescription,
-				eventType:body.eventType || data.eventType,
-				url:body.url || data.url,
+				...body,
 				image:image,
 				toggle:toggle,
 				totalJoined:body.totalJoined || data.totalJoined,

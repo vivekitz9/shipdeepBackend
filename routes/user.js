@@ -12,7 +12,7 @@ const {verifyToken} = require('../middlewares/verifyToken')
 const TABLE_NAME = 'users';
 
 const upload = multer({ storage: multer.memoryStorage() });
-const { getAllItems, batchInsertLargeDataset, 
+const { getAllItems, batchInsertLargeDataset, getConditionalRecords,addNewColumnToAllItems,
 	generateRandomString, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
 router.get('/users', verifyToken, async (req, res) => {
 	try {
@@ -21,6 +21,11 @@ router.get('/users', verifyToken, async (req, res) => {
 	} catch (err) {
 		res.errors({message:'Something went wrong'})
 	}
+});
+
+// API route to return translated message
+router.get("/greet", (req, res) => {
+	res.success({ message: res.__("greeting") }); // Will return "नमस्ते" if Hindi is selected
 });
 
 router.get('/checkUserExist/:mobile', async (req, res) => {
@@ -50,22 +55,116 @@ router.get('/checkUserExist/:mobile', async (req, res) => {
 	}
 });
 
+
+router.post('/socialLogin', async (req, res) => {
+	const body = r
+	try {
+		if(!body.mobile){
+			res.errors({message:'Mobile Number Required'})
+		}else {
+			const userParams = {
+				TableName: 'users',
+				FilterExpression: "isSocialLogin = :socialLogin AND mobile = :mobileData",
+				ExpressionAttributeValues: {
+				  ":socialLogin": true,      // Boolean true
+				  ":mobileData": body.mobile,  // String "true"
+				},
+			  };
+			const firstTimeuser = await getConditionalRecords(userParams);
+			  console.log('firstTimeuser',firstTimeuser);
+
+			if(firstTimeuser.length>0){
+					const data = firstTimeuser[0]
+					const userPayload = {
+						id: data.id,          // User ID
+						username: data.userName, // Example username
+						mobile: data.mobile, // Example mobile
+						userrole: data.userrole        // Example user role
+					};		  
+					const token = await generateAuthToken(userPayload);
+					console.log('Generated JWT:', token);
+					data.token = token
+					data.sessionId = uuidv4();
+					const itemObject = {
+						sessionId: data.sessionId,
+						updatedDate:new Date().toISOString()
+					}
+					await updateItem(TABLE_NAME, data.id, itemObject)
+					res.success({data:data, message:"user login successfuly"})
+				}else{
+								
+					if(!body.fullName){
+						res.errors({message:'Full Name Required'})
+					}else if(!body.mobile){
+						res.errors({message:'Mobile Number Required'})
+					}else if(!body.gender){
+						res.errors({message:'Gender Required'})
+					}else if(!body.sessionId){
+						res.errors({message:'sessionId Required'})
+					}else{
+						body.id = uuidv4();
+						let image = ""
+						const isMember= (body.isMember=="true" || body.isMember=="false")?body.isMember:false
+						const item = {
+							id:body.id,
+							fullName:body.fullName,
+							userName:body.fullName.toLowerCase().replaceAll(/\s/g,''),
+							userrole:body.userrole || 'user',
+							email:body.email || "",
+							mobile:body.mobile,
+							gender:body.gender,
+							dob:body.dob || "",
+							district:body.district || "",
+							state:body.state || "",
+							dateOfJoining:body.dateOfJoining?new Date(body.dateOfJoining).toISOString() : "",
+							image:image,
+							isMember:isMember,
+							isSocialLogin:true,
+							memberId:Date.now(),
+							sessionId:uuidv4(),
+							referralCode:await generateRandomString(8),
+							createDate:new Date().toISOString(),
+							updatedDate:new Date().toISOString()
+						}
+						const newItem = await insertItem(TABLE_NAME, item);
+						const userPayload = {
+							id: item.id,          // User ID
+							username: item.userName, // Example username
+							mobile: item.mobile, // Example mobile
+							userrole: item.userrole        // Example user role
+						};	
+						const token = await generateAuthToken(userPayload);
+						item.token =token
+						console.log('newItem', newItem);
+						res.success({data:item, message:"user registered successfuly"})
+					}
+				}
+		}
+	} catch (err) {
+			res.errors({message:'Something went wrong',data:err})
+
+	}
+});
+
 router.post('/login', async (req, res) => {
 	const body = req.body;	
 	try {
 		if(!body.mobile){
 			res.errors({message:'Mobile Number Required'})
 		}else {
-			const indexName = "mobileIndex"
-			const keyConditionExpression = "mobile = :mobile"
-			const expressionAttributeValues = {
-				":mobile":body.mobile
-			}
-			const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
-			console.log('getData', getData);
+			const userParams = {
+				TableName: 'users',
+				FilterExpression: "isSocialLogin = :socialLogin AND mobile = :mobileData",
+				ExpressionAttributeValues: {
+				  ":socialLogin": "false",      // Boolean true
+				  ":mobileData": body.mobile,  // String "true"
+				},
+			  };
+			const firstTimeuser = await getConditionalRecords(userParams);
+			  console.log('firstTimeuser',firstTimeuser);
 
-			if(getData.Items.length>0){
-				const data = getData.Items[0]
+			if(firstTimeuser.length>0){
+					const data = firstTimeuser[0]
 					const userPayload = {
 						id: data.id,          // User ID
 						username: data.userName, // Example username
@@ -79,6 +178,7 @@ router.post('/login', async (req, res) => {
 						data.sessionId = 'd8039ce8-3088-41f1-8e08-10bd3b99ce1e'
 						const itemObject = {
 							sessionId: data.sessionId,
+							fcmToken: body.fcmToken,
 							updatedDate:new Date().toISOString()
 						}
 						await updateItem(TABLE_NAME, data.id, itemObject)
@@ -95,6 +195,7 @@ router.post('/login', async (req, res) => {
 						data.sessionId = resp.Details
 						const itemObject = {
 							sessionId: data.sessionId,
+							fcmToken: body.fcmToken,
 							updatedDate:new Date().toISOString()
 						}
 						await updateItem(TABLE_NAME, data.id, itemObject)
@@ -303,14 +404,18 @@ router.post('/users', upload.single("file"), async (req, res) => {
 		}else if(!body.sessionId){
 			res.errors({message:'sessionId Required'})
 		}else{
-			const indexName = "mobileIndex"
-			const keyConditionExpression = "mobile = :mobile"
-			const expressionAttributeValues = {
-				":mobile":body.mobile
-			}
-			const getData = await getMultipleItemsByQuery(TABLE_NAME, indexName, keyConditionExpression, expressionAttributeValues);
-			console.log('getData', getData);
-			if(getData.Items.length>0){
+			const userParams = {
+				TableName: 'users',
+				FilterExpression: "isSocialLogin = :socialLogin AND mobile = :mobileData",
+				ExpressionAttributeValues: {
+				  ":socialLogin": "false",      // Boolean true
+				  ":mobileData": body.mobile,  // String "true"
+				},
+			  };
+			const firstTimeuser = await getConditionalRecords(userParams);
+			  console.log('firstTimeuser',firstTimeuser);
+
+			if(firstTimeuser.length>0){
 				res.errors({message:'User already exist'})
 			}else{
 				body.id = uuidv4();
@@ -331,6 +436,7 @@ router.post('/users', upload.single("file"), async (req, res) => {
 					dateOfJoining:body.dateOfJoining?new Date(body.dateOfJoining).toISOString() : "",
 					image:image,
 					isMember:isMember,
+					isSocialLogin:"false",
 					memberId:Date.now(),
 					sessionId:body.sessionId || "1234",
 					referralCode:await generateRandomString(8),

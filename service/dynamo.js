@@ -42,7 +42,7 @@ const comparePassword = async(plainPassword, hashedPassword) => {
 }
 
 // Function to generate a JWT
-const generateAuthToken =async(payload, expiresIn = '24h') =>{
+const generateAuthToken =async(payload, expiresIn = '7d') =>{
   try {
     // Create the token
     const token = jwt.sign(payload, SECRET_KEY, { expiresIn });
@@ -377,6 +377,40 @@ const renameColumn = async(oldName, newName) => {
 	  console.error("Error renaming column:", error.message);
 	}
   }
+const addNewColumnToAllItems = async(tableName, columnName, defaultValue)=>{
+    try {
+        // Step 1: Scan to get all items
+        let params = { TableName: tableName };
+        let data = await DocumentClient.scan(params).promise();
+
+        if (!data.Items || data.Items.length === 0) {
+            console.log("No items found in the table.");
+            return;
+        }
+
+        console.log(`Updating ${data.Items.length} items...`);
+
+        // Step 2: Update each item with the new column
+        for (const item of data.Items) {
+            const key = { id: item.id }; // Change 'id' to your table's primary key attribute
+
+            let updateParams = {
+                TableName: tableName,
+                Key: key,
+                UpdateExpression: `SET #newAttr = :value`,
+                ExpressionAttributeNames: { "#newAttr": columnName },
+                ExpressionAttributeValues: { ":value": defaultValue }
+            };
+
+            await DocumentClient.update(updateParams).promise();
+            console.log(`Updated item with ID: ${item.id}`);
+        }
+
+        console.log("✅ All items updated successfully!");
+    } catch (error) {
+        console.error("❌ Error updating items:", error);
+    }
+}
 module.exports = {
 	DocumentClient,
 	getAllItems,
@@ -401,5 +435,6 @@ module.exports = {
 	generateAuthToken,
 	hashPassword,
 	comparePassword,
-	batchInsertLargeDataset
+	batchInsertLargeDataset,
+	addNewColumnToAllItems
 };
