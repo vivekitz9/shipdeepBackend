@@ -8,7 +8,20 @@ const {verifyToken} = require('../middlewares/verifyToken')
 const upload = multer({ storage: multer.memoryStorage() });
 const { getAllItems, generateRandomString,getConditionalRecords, countRecords, getLastValue,generateAuthToken,uploadFileToS3, deleteFileFromS3, insertItem, updateItem,filterItemsByQuery, getMultipleItemsByQuery,getSingleItemById, deleteSingleItemById, sendSMSMessage } = require('../service/dynamo');
 router.get('/', async (req, res) => {
-	try {
+		try {
+		const today = new Date();
+		// Get the timestamp for 7 days ago
+		const sevenDaysAgo = new Date();
+		sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+		// Get the timestamp for 7 days afer
+		const sevenDaysAfter = new Date();
+		sevenDaysAfter.setDate(sevenDaysAfter.getDate() + 7);
+	
+		// Convert to YYYY-MM-DD format
+		const formattedTodayDate = today.toISOString().split("T")[0];
+		const formattedDate = sevenDaysAgo.toISOString().split("T")[0];
+		const formattedDateAfter = sevenDaysAfter.toISOString().split("T")[0];
 		const bannerParams = {
 			TableName: 'banner',
 			FilterExpression: "isActive = :boolTrue OR isActive = :stringTrue",
@@ -21,8 +34,10 @@ router.get('/', async (req, res) => {
 		const itemsBanner = totalbanner//await getAllItems('banner');
 		const eventsParams = {
 			TableName: 'events',
-			FilterExpression: "toggle = :boolTrue OR toggle = :stringTrue",
+			FilterExpression: "(eventDate <= :sevenDaysAfter AND eventDate >= :todayDate ) AND (toggle = :boolTrue OR toggle = :stringTrue)",
 			ExpressionAttributeValues: {
+			":sevenDaysAfter": formattedDateAfter,
+			":todayDate": formattedTodayDate,
 			  ":boolTrue": 1,      // Boolean true
 			  ":stringTrue": "1",  // String "true"
 			},
@@ -38,12 +53,7 @@ router.get('/', async (req, res) => {
 			},
 		  };
 		const totalUser = await getConditionalRecords(userParams);
-		// Get the timestamp for 7 days ago
-		const sevenDaysAgo = new Date();
-		sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-	
-		// Convert to YYYY-MM-DD format
-		const formattedDate = sevenDaysAgo.toISOString().split("T")[0];
+
 	
 		const newsParams = {
 		TableName: 'news',
