@@ -65,6 +65,8 @@ router.post("/createNotification", upload.single("file"), async (req, res) => {
           notificationDescription: body.notificationDescription,
           notificationImage: image, // Image is optional
           createdBy: body.userName,
+          createDate:new Date().toISOString(),
+          updatedDate:new Date().toISOString()
       };
 
       await insertItem(NOTIFICATION_TABLE_NAME, notificationPayload);

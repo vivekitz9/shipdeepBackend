@@ -57,7 +57,7 @@ router.get('/checkUserExist/:mobile', async (req, res) => {
 
 
 router.post('/socialLogin', async (req, res) => {
-	const body = r
+	const body = req.body
 	try {
 		if(!body.mobile){
 			res.errors({message:'Mobile Number Required'})
@@ -178,7 +178,7 @@ router.post('/login', async (req, res) => {
 						data.sessionId = 'd8039ce8-3088-41f1-8e08-10bd3b99ce1e'
 						const itemObject = {
 							sessionId: data.sessionId,
-							fcmToken: body.fcmToken,
+							fcmToken: body.fcmToken ||"",
 							updatedDate:new Date().toISOString()
 						}
 						await updateItem(TABLE_NAME, data.id, itemObject)
@@ -195,7 +195,7 @@ router.post('/login', async (req, res) => {
 						data.sessionId = resp.Details
 						const itemObject = {
 							sessionId: data.sessionId,
-							fcmToken: body.fcmToken,
+							fcmToken: body.fcmToken ||"",
 							updatedDate:new Date().toISOString()
 						}
 						await updateItem(TABLE_NAME, data.id, itemObject)
